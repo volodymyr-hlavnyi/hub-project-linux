@@ -143,17 +143,17 @@ sudo service httpd status
 
 site is working!
 
-26. Check again and fib files more then 100M
+26. Check again and finb files more then 100M
 sudo find / -type f -size +100M -exec du -h {} +
 
 27. View crontab
 sudo crontab -l
 
 28. Solve the cause of the incident: the cleanup mechanism.
-Problem self make arch every 1 munute
+Problem self make arch every 1 minutes
 * * * * * tar tar -czf /var/log/httpd/log_$(date) /
 
-chage this string (running every minutes.... it big problem...)
+Change this string (running every minutes.... it's a big problem...)
 
 28. Correct this in crontab
 crontanb -e
@@ -165,7 +165,7 @@ sudo rm -rf /var/log/httpd/lof_20240408.tar.gz
 
 30. Check free space
 df -h
-we have enoght free space (abount 7G from 10G)
+we have enough free space (about 7G from 10G)
 
 ls -lah /var/log/httpd/
 
