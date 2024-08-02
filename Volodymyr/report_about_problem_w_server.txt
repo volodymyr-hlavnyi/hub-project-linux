@@ -1,0 +1,286 @@
+---START---
+
+"POST MORTEM REPORT"
+-----------
+
+
+1. Check that the site is really down.
+Open web server and see some problem with description error
+
+dig 3.68.118.16
+or
+nslookup 3.68.118.16
+
+throughout browser check site
+
+see don't working
+
+
+2. Connect to the server.
+ssh -i ec2-user@3.68.118.16
+
+
+3. View the httpd process status.
+Try to check status and restart httpd service
+sudo service httpd.service status
+
+see some problem with runnig servcie httpd
+
+4. Start the service (or restart servcies).
+try restart
+sudo service httpd.service restart
+
+check in browser
+Shift F5
+
+Do not working....
+
+5. View the service status.
+sudo service httpd.service status
+
+
+6. Check: is the service working?
+If the service is working, then we will see but something happened to the settings file.
+Check files in root catalog
+check catalog
+ls -lah
+
+Find files
+sudo find / -type f 
+
+analyzing files ....
+/var/log/httpd/access_log
+/var/log/httpd/access_log
+/var/log/local-archive
+
+7. Check the occupied space in the file system: during the search, the system will let you know that the space has run out more then 100M
+
+sudo find / -type f -size +100M -exec du -h {} +
+7,0G /var/log/httpd/access_log 
+
+sudo echo > /var/log/httpd/acccess_log
+file was blocked
+
+8. Make decision to stop service httpd
+sudo service httpd stop
+
+try to clear file acces_log
+sudo echo > /var/log/httpd/acccess_log
+
+9. try to delete file access_log
+sudo -rf /var/log/httpd/acccess_log
+
+10. Check space on disk after deleting access_log
+df -h
+/dev/mvm@n1p1 32% free
+
+see 35% is free
+this is very good
+
+11. try to restart our httpd service
+sudo service httpd start
+
+12. See status:
+sudo service httpd status
+
+13. Go to browser and check ste by ip address:
+3.68.118.16 
+
+14. But see, problem still present, nothing to changed
+We will get an error.
+
+15. Find out why the service cannot connect to the database:
+Search for errors in /var/log/httpd/error_log
+cat /var/log/httpd/error_log
+and lookup where is a problem
+
+16. The application settings are in the file: /home/ec2-user/LocalSettings\ \ (5)\.php
+Check catalog:
+ls  -la /var/www/html/mediawiki
+
+17. View some interesting file
+LocalSetting (5).php - 0 size
+.LocalSetting.php - 0 size
+LocSetting.php - 5355 byte size
+
+18. Delete 2 files, becouse the are 0 byte size
+LocalSetting (5).php - 0 size
+.LocalSetting.php - 0 size
+
+19. Delete file with 0 size
+rm /var/www/htmlmediawiki/LocalSettings.php
+
+rm /var/www/html/mediawiki/.LocalSettings.php
+
+20. Rename file in correct naming
+mv /var/www/html/mediawiki/LocSetting.php
+
+21. Check file name
+ls -la
+
+
+21. Go to on 3.68.118.16
+
+22. Check status httpd
+sudo service httpd status
+
+problem with setting probably
+
+cat /var/www/html/mediawiki/LocalSettings.php
+view for checking
+
+nano /var/www/html/mediawiki/LocalSettings.php
+change line with $wgServer = "hhtp:/18.153.51.162" is incorrect
+
+23. Check file and write correct ip address 3.68.118.16
+change line with $wgServer = "hhtp:/3.68.118.16"
+
+24. Restart service http after changed ip servers
+sudo service httpd restart
+
+25. Check status 
+sudo service httpd status
+
+site is working!
+
+26. Check again and fib files more then 100M
+sudo find / -type f -size +100M -exec du -h {} +
+
+27. View crontab
+sudo crontab -l
+
+28. Solve the cause of the incident: the cleanup mechanism.
+Problem self make arch every 1 munute
+* * * * * tar tar -czf /var/log/httpd/log_$(date) /
+
+chage this string (running every minutes.... it big problem...)
+
+28. Correct this in crontab
+crontanb -e
+
+29. Deleting unnecessary archives
+delete archives
+sudo rm -rf /var/log/httpd/lof_20240402.tar.gz
+sudo rm -rf /var/log/httpd/lof_20240408.tar.gz
+
+30. Check free space
+df -h
+we have enoght free space (abount 7G from 10G)
+
+ls -lah /var/log/httpd/
+
+log file is very quickly grow!
+Problem are:
+ 1. create archive logs file
+ 2. access clear every day
+
+sudo crontab -l
+
+31. Deleting all achieves
+sudo rm -rf /var/log/httpd/log_*_*.tar.gz
+
+delete shoulld to one by one files *.tar.gz
+
+32. clear files
+sudo echo > /var/log/httpd/acces_log
+- Permission denied
+
+33. get more right for this operation
+sudo su -
+get su right
+
+34. Clear file
+echo > /var/log/httpd/acces_log
+it is working....
+clear file
+
+35. Exi from root user right
+exit
+
+35. Create a script that will create an archive and delete old copies. 
+Name it, for example, /home/ec2-user/backup_httpd_logs.sh
+
+nano backup_httpd_log.sh
+
+---------------------------------------------
+#!/bin/bash
+#
+LOG_DIR="/var/log/httpd"
+BACKUP_DIR="/home/ec2-user/backup_httpd_log"
+
+mkdir -p "$BACKUP_DIR"
+
+DATE=`date +'%Y%m%d'`
+ARCHIVE="$BACKUP_DIR/LogHTTPD-$DATE.tar.gz"
+
+tar -czf "@ARCHIVE" "$LOG_DIR"
+
+sudo service httpd stop
+
+sudo rm -rf "$LOG_DIR/access_log"
+
+sudo service httpd start
+
+find "$BACKUP_DIR" -type f -name "LogHTTPD-*.tar.gz" -mtime +3 -exec rm -rf {} \;
+
+---------------------------------------------
+
+Save file
+
+36. Check file
+ls -la
+
+37. Add executability and a new task.
+chmod +x backup_httpd_log.sh
+
+ls -la
+check user right
+
+38. run bat, correct error in bat file
+
+39. Check archives
+tar -tf backup_http_log/Log*.tar.gz
+is empty....
+
+sudo ls -lah /var/log/httpd/
+
+40. Check access log was cleared
+
+41. check mtime
+
+42. Create a task in the cron scheduler so that this file is archived and restarted
+every day.
+get current parh for coping
+pwd
+ls -la
+copy path
+
+43. Add our script to crontab
+sudo crontab -e
+5 0 * * * /home/ec2-user/backup+httpd_log.sh
+for chec set every 3 minutes
+*/3 * * * * /home/ec2-user/backup+httpd_log.sh
+
+44. Save and wait and check file running with every 3 minutes creation arch
+
+45. After checking - Return to normal crontab
+Every day in 00:05 hh:mm
+5 0 * * * /home/ec2-user/backup+httpd_log.sh
+
+--FINISH WORKING WITH SERVER--
+
+-----------------
+Recommendation:
+-----------------
+
+1. Create regular archiving log file for httpd server
+(create correct catalog for backup files and check do not using recursive archiving process file in file)
+
+2. Create script with regular checking free space on server 
+(and if it possibly to send notification to server admin with lower space about less then 75% of free space)
+
+3. Also possible way to add running new script to check httpd service and send info if then do not working
+
+4. Also add check access to web server and send info if it loss access then send info to server admin 
+
+---END---
